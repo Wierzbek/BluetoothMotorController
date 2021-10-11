@@ -17,6 +17,11 @@ int last = 99;
 char data = '0';
 bool isValid = true;
 
+// BTconnected will = false when not connected and true when connected
+boolean BTconnected = false;
+// connect the STATE pin to Arduino pin D4
+const byte BTpin = 4;
+
 // Setup - called only once
 void setup() {
     // set the BTpin for input
@@ -29,6 +34,13 @@ void setup() {
     /** Setup UART port (Serial1 on Atmega32u4) */
     Serial.begin(19200);
 
+    // wait until the HC-05 has made a connection
+    while (!BTconnected)
+    {
+      if ( digitalRead(BTpin)==HIGH)  { BTconnected = true;};
+    } 
+    Serial.println("HC-05 is now connected");
+
     while (!Serial) {;}
 
     /** Define which ports to use as UART */
@@ -38,13 +50,24 @@ void setup() {
 
 // Main Loop
 void loop() {
-    data = BTSerial.read();    
-    // Print the value of data 
-    Serial.println("The BT input is: ");
-    Serial.println(data);
+    // If the HC-05 is connected, allow to set motor speeds
+    if (BTConnected == true)
+    {  
+        if ( digitalRead(BTpin)==LOW)
+        {
+            BTconnected = false;
+            Serial.println("HC-05 is now disconnected");
+            setup();
+        }
+        data = BTSerial.read();
 
-    validateInput(data);
-    UART.setCurrent(current);
+        // Check if the value sent via Bluetooth is in the range 0 - 9
+        validateInput(data);
+        UART.setCurrent(current);
+        // else, switch the motor off
+    } else {
+        current = 0;
+    }    
 }
 
 void validateInput(char c){
